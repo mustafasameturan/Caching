@@ -1,3 +1,4 @@
+using DistributedCaching.Services;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,13 +13,22 @@ var host = builder.Configuration.GetSection("Redis")["Host"];
 var port = builder.Configuration.GetSection("Redis")["Port"];
 var redisConnectionString = $"{host}:{port}";
 
+//IDistributedCache DB connection
 builder.Services.AddStackExchangeRedisCache(opt =>
 {
     opt.Configuration = redisConnectionString;
 });
 
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp => 
-    ConnectionMultiplexer.Connect(redisConnectionString));
+// Redis Stack Exchange DB connection
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var redisService = sp.GetService<RedisService>();
+    return redisService!.GetConnectionMultiplexer;
+});
+builder.Services.AddSingleton(_ =>
+{
+    return new RedisService(builder.Configuration);
+});
 
 var app = builder.Build();
 
